@@ -1,62 +1,56 @@
 var express = require('express');
-
 var bookRouter = express.Router();
+var mongodb = require('mongodb').MongoClient;
+var ObjectID = require('mongodb').ObjectID;
 
 var router = function (nav) {
-var books = [{
-				title:'War',
-				genre:'Fiction',
-				author: 'author2',
-				read: false
-			},{
-				title:'War2',
-				genre:'Comedy',
-				author: 'author3',
-				read: false
-			},{
-				title:'War3',
-				genre:'Drama',
-				author: 'author4',
-				read: false
-			},{
-				title:'War4',
-				genre:'History',
-				author: 'author5',
-				read: false
-			},{
-				title:'War5',
-				genre:'Biography',
-				author: 'author6',
-				read: false
-			},{
-				title:'War6',
-				genre:'Documentary',
-				author: 'author7',
-				read: false
-			}];
 
-bookRouter.route('/')
-	.get(function (req, res) {
-		res.render('books', { 
-		title:'Books',
-		nav: nav,
-			books : books
+
+	bookRouter.route('/')
+		.get(function (req, res) {
+			var url = 'mongodb://localhost:27017/libraryApp';
+
+			mongodb.connect(url, function (err, db) {
+				var collection = db.collection('books');
+				collection.find({}).toArray(
+					function (err, results) {
+						res.render('books', { 
+							title:'Books',
+							nav: nav,
+							books : results
+						});
+						db.close();
+					}
+				);
+			});	
 		});
-	});
 
 bookRouter.route('/:id')
+	.all(function (req, res, next) {
+		var id = new ObjectID(req.params.id);
+		var url = 'mongodb://localhost:27017/libraryApp';
+
+		mongodb.connect(url, function (err, db) {
+			var collection = db.collection('books');
+			collection.findOne({_id: id},
+				function (err, results) {
+					req.book = results;
+					next();
+				}
+			);		
+		});	
+	})
 	.get(function (req, res) {
-		var id = req.params.id;
 		res.render('book', { 
-		title:'Book',
-		nav: nav,
-			book : books[id]
+			title:'Book',
+			nav: nav,
+			book : req.book
 		});
 	});
 
 	return bookRouter;
 
-}
+};
 
 
 module.exports = router;
